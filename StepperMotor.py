@@ -2,10 +2,11 @@ import RPi.GPIO as GPIO
 from time import sleep
 import _thread as thread  # for python 3
 import threading
+import copy
 
 
 class StepperMotor:
-    def __init__(self, EN, DIR, STEP, LIMITSWITCH, step_ratio, gear_ratio, step_per_turn,origin_angle):
+    def __init__(self, EN, DIR, STEP, LIMITSWITCH, step_ratio, gear_ratio, step_per_turn, default_delay, origin_angle):
         self.EN_PIN = EN
         self.DIR_PIN = DIR
         self.STEP_PIN = STEP
@@ -16,6 +17,9 @@ class StepperMotor:
         self.origin_angle = origin_angle
         self.actual_angle = 0
         self.actual_step = 0
+        self.__setpoint = 0
+        self.__setpoint_delay = 0
+        self.default_delay = default_delay
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.EN_PIN, GPIO.OUT)
         GPIO.setup(self.DIR_PIN, GPIO.OUT)
@@ -83,7 +87,9 @@ class StepperMotor:
             GPIO.output(self.STEP_PIN, GPIO.LOW)
             sleep(0.0001*(delay))
             
-    def rotation_angle(self,delay,degree,direction):
+    def rotation_angle(self,delay,angle,direction,setpoint_break=False):
+        local_setpoint_old = self.__setpoint
+            
         if direction == 0:
             GPIO.output(self.DIR_PIN, GPIO.LOW)
             incr_step = +1
@@ -91,18 +97,31 @@ class StepperMotor:
             GPIO.output(self.DIR_PIN, GPIO.HIGH)
             incr_step = -1
             
-        step_number = int(((self.step_ratio*self.gear_ratio*self.step_per_turn)/360)*degree)
+        step_number = self.get_step_number(angle)
         
         sleep(0.1)
         for i in range(0,step_number):
+            if GPIO.input(self.LIMITSWITCH_PIN) == 0 and abs(self.get_actual_angle() - self.origin_angle)>5:
+                print("limit switch in rotation_angle")
+                return False
             GPIO.output(self.STEP_PIN, GPIO.HIGH)
             sleep(0.0001)
             GPIO.output(self.STEP_PIN, GPIO.LOW)
             sleep(0.0001*delay)   
-            self.actual_step += incr_step
+            self.actual_step += incr_step    
+            if local_setpoint_old != self.__setpoint and setpoint_break == True:
+                print("Break of rotation_angle")
+                return False     
+            local_setpoint_old = self.__setpoint
+        return True
             
     def reach_angle(self,delay=5,angle=0):
-        actual_angle = ((((self.actual_step/self.gear_ratio)/self.step_ratio)/self.step_per_turn)*360)+self.origin_angle
+        if angle > abs(self.origin_angle):
+            angle = abs(self.origin_angle)
+        elif angle < -abs(self.origin_angle):
+            angle = -abs(self.origin_angle)
+            
+        actual_angle = self.get_actual_angle()
         angle_to_do = actual_angle - angle
         if angle_to_do < 0:
             direction = 0
@@ -114,6 +133,63 @@ class StepperMotor:
         t = threading.Thread(target=self.reach_angle, args=(delay,angle))
         t.start()
         
+    def reach_setpoint(self):
+        setpoint_old = None
+        while(True):
+            if self.__setpoint > abs(self.origin_angle):
+                print("a")
+                self.__setpoint = abs(self.origin_angle)
+            elif self.__setpoint < -abs(self.origin_angle):
+                print("b")
+                self.__setpoint = -abs(self.origin_angle)
+            reached = True
+            if setpoint_old != self.__setpoint:
+                setpoint_old = self.__setpoint
+                actual_angle = self.get_actual_angle()
+                angle_to_do = actual_angle - self.__setpoint
+                if angle_to_do < 0:
+                    direction = 0
+                else:
+                    direction = 1
+                print("Will reach setpoint of", self.__setpoint)                
+                print(setpoint_old, self.__setpoint)
+                reached = self.rotation_angle(self.__setpoint_delay,abs(angle_to_do),direction,True)
+                print(reached)
+                print(setpoint_old, self.__setpoint)
+            if reached == True:
+                setpoint_old = self.__setpoint
+            sleep(0.01)
+    
+    def get_actual_angle(self):
+        return ((((self.actual_step/self.gear_ratio)/self.step_ratio)/self.step_per_turn)*360)+self.origin_angle
+    
+    def get_step_number(self,angle):
+        return int(((self.step_ratio*self.gear_ratio*self.step_per_turn)/360)*angle)
+    
+    def get_angle_time(self,delay,angle):
+        real_angle = abs(self.get_actual_angle()-angle)
+        return self.get_step_number(real_angle)*(0.0001+0.0001*(delay))
+    
+    def get_angle_delay(self,time,angle):
+        real_angle = abs(self.get_actual_angle()-angle)
+        print(real_angle)
+        if int(real_angle) == 0:
+            return self.__setpoint_delay
+        else:            
+            return  ((time/self.get_step_number(real_angle))-0.0001)/0.0001
+    
+    def threaded_reach_setpoint(self,delay=5,setpoint=0):
+        self.set_setpoint(setpoint)
+        self.__setpoint_delay = delay
+        t = threading.Thread(target=self.reach_setpoint, args=())
+        t.start()
+        
+    def set_setpoint(self, setpoint, delay=0):
+        if delay != 0:
+            self.__setpoint_delay = delay
+        else:
+            self.__setpoint_delay = self.default_delay
+        self.__setpoint = setpoint
         
         
         
