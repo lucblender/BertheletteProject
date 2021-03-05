@@ -14,7 +14,7 @@ from time import sleep
 SPEED_LIMIT = 30
 
 motorA = StepperMotor(21,20,16,12,1,7*9,200, 10,-88)  
-motorB = StepperMotor(26,19,13,6,1,7*7,200, 7,134)   
+motorB = StepperMotor(26,19,13,6,1,7*7,200, 10,134)   
 motorC = StepperMotor(18,15,14,23,1,7*7,200, 7,-106)
 motorD = StepperMotor(22,27,17,4,16,4,200, 7,-142)
 servoA = ServoMotor(7)
@@ -31,23 +31,21 @@ app = Flask(__name__)
 
 def initBerthelette():
     motorC.init_position(7)
-    motorB.init_position(7)
+    motorB.init_position(10)
     motorA.init_position(10)
     motorD.init_position(7)
-
     sleep(2)
-
     motorA.reach_angle(10,0)
     motorD.reach_angle(7,-90)
-    motorB.threaded_reach_angle(7,0)
+    motorB.threaded_reach_angle(10,0)
     motorC.threaded_reach_angle(7,0)
 
     sleep(10)
 
-    motorA.threaded_reach_setpoint(10)
-    motorB.threaded_reach_setpoint(7)
-    motorC.threaded_reach_setpoint(7)
-    motorD.threaded_reach_setpoint(7,-90)
+    #motorA.threaded_reach_setpoint(10)
+    #motorB.threaded_reach_setpoint(10)
+    #motorC.threaded_reach_setpoint(7)
+    #motorD.threaded_reach_setpoint(7,-90)
     
 
 def syncronize_motor_speed(angleA, angleB, angleC, angleD):
@@ -56,7 +54,7 @@ def syncronize_motor_speed(angleA, angleB, angleC, angleD):
     
     times = []
     times.append(motorA.get_angle_time(10,angleA))
-    times.append(motorB.get_angle_time(7,angleB))
+    times.append(motorB.get_angle_time(12,angleB))
     times.append(motorC.get_angle_time(7,angleC))
     times.append(motorD.get_angle_time(7,angleD))
     print("times:")
@@ -138,10 +136,10 @@ def angleD(angle):
 @app.route('/angleAll/<float(signed=True):angleA>/<float(signed=True):angleB>/<float(signed=True):angleC>/<float(signed=True):angleD>', strict_slashes=False)
 def angleAll(angleA,angleB,angleC,angleD):
     delayA, delayB, delayC, delayD = syncronize_motor_speed(angleA, angleB, angleC, angleD)
-    motorA.set_setpoint(angleA, delayA)
-    motorB.set_setpoint(angleB, delayB)
-    motorC.set_setpoint(angleC, delayC)
-    motorD.set_setpoint(angleD, delayD)
+    motorA.threaded_reach_angle(delayA, angleA,)
+    motorB.threaded_reach_angle(delayB, angleB)
+    motorC.threaded_reach_angle(delayC, angleC)
+    motorD.threaded_reach_angle(delayD, angleD)
     
     listDic = {}
     listDic['SUCCESS'] = "Setpoint set"
