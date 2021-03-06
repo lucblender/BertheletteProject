@@ -4,8 +4,13 @@ from mathutils import Euler
 from os import system
 import requests
 
-URL = "uri"
-
+head_selection = [('Finger','4 Fingers Claw','4 Fingers Claw'),
+                    ('TPU','TPU Claw','TPU Claw'),
+                    ('Vaccum','Vaccum Head','Vaccum Head')]
+                    
+pump_status = [('On','Pump On','4 Fingers Claw'),
+                    ('Off','Pump Off','TPU Claw')]
+                    
 class SimpleBoneAnglesPanel(bpy.types.Panel):
     bl_label = "Bone Angles"
     bl_space_type = 'VIEW_3D'
@@ -13,6 +18,8 @@ class SimpleBoneAnglesPanel(bpy.types.Panel):
 
     def draw(self, context):
 
+        row = self.layout.row()
+        row.operator("berthelette.init")
         row = self.layout.row()
         values = AngleHelper.segment_rotation()
         row.label(text='Angle A: {:.2f}'.format(values[0]))
@@ -27,18 +34,40 @@ class SimpleBoneAnglesPanel(bpy.types.Panel):
         row.label(text='Angle D: {:.2f}'.format(values[3]))
         row.operator("berthelette.sendd")
         row = self.layout.row()
-        row.label(text='Servo A: {:.2f}'.format(values[4]))   
-        row.operator("berthelette.servoa")     
-        row = self.layout.row()
         row.operator("berthelette.sendall")
-        row = self.layout.row()
-        row.operator("berthelette.init")
-        row = self.layout.row()
-        row.prop(bpy.context.scene,'ServoB')
-        row.operator("berthelette.servob")
-        row = self.layout.row()
-        row.prop(bpy.context.scene,'ServoC')
-        row.operator("berthelette.servoc")
+        
+        box = self.layout.box()  
+        row=box.row() 
+        row.label(text="Head parameters")
+        row=box.row()
+        row.prop(bpy.context.scene,'ClawSelector')
+        row=box.row()
+        row.label(text='Servo A: {:.2f}'.format(values[4]))   
+        row.operator("berthelette.servoa")  
+        
+        
+        if context.scene.ClawSelector == {"Vaccum"}:
+            row=box.row() 
+            row.prop(bpy.context.scene,'PumpStatus')
+        
+        row=box.row()                  
+        c1 = row.column()
+        c2 = row.column()  
+        c1.prop(bpy.context.scene,'ServoB')
+        c2.operator("berthelette.servob")
+        if context.scene.ClawSelector == {"Vaccum"}:
+            c1.enabled = False
+        else:
+            c1.enabled = True
+        row=box.row()             
+        c1 = row.column()
+        c2 = row.column()  
+        c1.prop(bpy.context.scene,'ServoC')
+        c2.operator("berthelette.servoc")
+        if context.scene.ClawSelector == {"Vaccum"}:
+            c1.enabled = False
+        else:
+            c1.enabled = True
  
 class AngleHelper():
 
@@ -95,7 +124,7 @@ class SendB(bpy.types.Operator): #fait un rendu de toutes les scenes
     
     def execute(self, context):   
         values = AngleHelper.segment_rotation()
-        response = requests.get('http://'+URL+':5000/angleB/{:.2f}'.format(values[1]))
+        response = requests.get('http://192.168.1.32:5000/angleB/{:.2f}'.format(values[1]))
               
         return{'FINISHED'}  
         
@@ -106,7 +135,7 @@ class SendC(bpy.types.Operator): #fait un rendu de toutes les scenes
     
     def execute(self, context):   
         values = AngleHelper.segment_rotation()
-        response = requests.get('http://'+URL+':5000/angleC/{:.2f}'.format(values[2]))
+        response = requests.get('http://192.168.1.32:5000/angleC/{:.2f}'.format(values[2]))
               
         return{'FINISHED'}  
         
@@ -117,7 +146,7 @@ class SendD(bpy.types.Operator): #fait un rendu de toutes les scenes
     
     def execute(self, context):   
         values = AngleHelper.segment_rotation()
-        response = requests.get('http://'+URL+':5000/angleD/{:.2f}'.format(values[3]))
+        response = requests.get('http://192.168.1.32:5000/angleD/{:.2f}'.format(values[3]))
               
         return{'FINISHED'}  
 
@@ -128,7 +157,7 @@ class SendAll(bpy.types.Operator): #fait un rendu de toutes les scenes
     
     def execute(self, context):   
         values = AngleHelper.segment_rotation()
-        response = requests.get('http://'+URL+':5000/angleAll/{:.2f}/{:.2f}/{:.2f}/{:.2f}'.format(values[0],values[1],values[2],values[3]))
+        response = requests.get('http://192.168.1.32:5000/angleAll/{:.2f}/{:.2f}/{:.2f}/{:.2f}'.format(values[0],values[1],values[2],values[3]))
               
         return{'FINISHED'}  
     
@@ -139,7 +168,7 @@ class ServoA(bpy.types.Operator): #fait un rendu de toutes les scenes
     
     def execute(self, context):   
         values = AngleHelper.segment_rotation()
-        response = requests.get('http://'+URL+':5000/servoA/{:.2f}'.format(values[4]))
+        response = requests.get('http://192.168.1.32:5000/servoA/{:.2f}'.format(values[4]))
               
         return{'FINISHED'}  
                 
@@ -150,7 +179,7 @@ class ServoB(bpy.types.Operator): #fait un rendu de toutes les scenes
     bl_description = 'Send angle of servoB'
     
     def execute(self, context):   
-        response = requests.get('http://'+URL+':5000/servoB/{:.2f}'.format(bpy.context.scene.ServoB))
+        response = requests.get('http://192.168.1.32:5000/servoB/{:.2f}'.format(bpy.context.scene.ServoB))
               
         return{'FINISHED'}  
                 
@@ -161,13 +190,65 @@ class ServoC(bpy.types.Operator): #fait un rendu de toutes les scenes
     bl_description = 'Send angle of servoC'
     
     def execute(self, context):   
-        response = requests.get('http://'+URL+':5000/servoC/{:.2f}'.format(bpy.context.scene.ServoC))
+        response = requests.get('http://192.168.1.32:5000/servoC/{:.2f}'.format(bpy.context.scene.ServoC))
               
         return{'FINISHED'}  
+    
+def servoB_update(self, context):
+    if self.ServoB == 180:
+        print(self.ServoB)
+
+    print("My property is:", self.ServoB)
+                    
+def servoB_set(self, value):
+    if self.ClawSelector == {'TPU'}:
+        if value > 50:
+            value = 50    
+    
+    self["ServoB"] = value
+                    
+def servoB_get(self):
+    value = self["ServoB"]
+    if self.ClawSelector == {'TPU'}:
+        bpy.data.objects['Gear left'].rotation_euler[1] = radians(-value)
+        bpy.data.objects['Gear right'].rotation_euler[1] = radians(value)
+    elif self.ClawSelector == {"Finger"}:
+        bpy.data.objects['Finger_1'].rotation_euler[1] = radians(-90+value/7.2)
+        bpy.data.objects['Finger_2'].rotation_euler[1] = radians(-90-value/7.2)
+        bpy.data.objects['Finger_3'].rotation_euler[1] = radians(-90-value/7.2)
+        bpy.data.objects['Finger_4'].rotation_euler[1] = radians(-90-value/7.2)
+    elif self.ClawSelector == {"Vaccum"}:
+        pass
+    return self.get("ServoB", 0.0)
+
+def clawSelector_update(self, context):
+    if self.ClawSelector == {"TPU"}:
+        bpy.data.collections['Fingers Claw'].hide_viewport = True
+        bpy.data.collections['TPU Claw'].hide_viewport = False
+        bpy.data.collections['Vaccum Head'].hide_viewport = True
+    elif self.ClawSelector == {"Finger"}:
+        bpy.data.collections['Fingers Claw'].hide_viewport = False
+        bpy.data.collections['TPU Claw'].hide_viewport = True
+        bpy.data.collections['Vaccum Head'].hide_viewport = True
+    elif self.ClawSelector == {"Vaccum"}:
+        bpy.data.collections['Fingers Claw'].hide_viewport = True
+        bpy.data.collections['TPU Claw'].hide_viewport = True
+        bpy.data.collections['Vaccum Head'].hide_viewport = False
+        
+def pumpStatus_update(self, context):
+    if self.PumpStatus == {"On"}:
+        context.scene.ServoB = 0
+        context.scene.ServoC = 180
+    elif self.PumpStatus == {"Off"}:
+        context.scene.ServoB = 180
+        context.scene.ServoC = 0
                 
 
-bpy.types.Scene.ServoB = bpy.props.FloatProperty(default=90, min=0, max=180, step=500)
+bpy.types.Scene.ServoB = bpy.props.FloatProperty(default=90, min=0, max=180, step=500, set=servoB_set, get=servoB_get)
 bpy.types.Scene.ServoC = bpy.props.FloatProperty(default=90, min=0, max=180, step=500)
+
+bpy.types.Scene.ClawSelector = bpy.props.EnumProperty(items=head_selection,options={'ENUM_FLAG'}, default = {"Finger"}, update=clawSelector_update)
+bpy.types.Scene.PumpStatus = bpy.props.EnumProperty(items=pump_status,options={'ENUM_FLAG'}, default = {"Off"}, update=pumpStatus_update)
 bpy.utils.register_class(InitRequest)
 bpy.utils.register_class(ServoA)
 bpy.utils.register_class(ServoB)
