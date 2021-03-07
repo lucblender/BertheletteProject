@@ -40,52 +40,40 @@ class StepperMotor:
             sleep(0.0001*delay) 
         self.actual_angle = self.origin_angle
         self.actual_step = 0
-    def testramp0(self,delay_start=1, delay_stop=1, acceleration_time=1, step_ration=1):
-        acceleration_time_s =  acceleration_time/1000
-        cycle_average = (0.0001*delay_start+0.0001*delay_stop)
-        ramp_cycles = (acceleration_time_s/cycle_average)
-        increment = (delay_start-delay_stop)/ramp_cycles
-        step_number = int(200*16*step_ration)
-        GPIO.output(self.DIR_PIN, GPIO.LOW)
-        sleep(0.1)    
-        if ramp_cycles*2 > step_number:
-            ramp_cycles = step_number/2
-        for i in range(0,step_number):
+          
+    def rotation_angle_ramp(self,delay_start, delay_stop, acceleration_time_ms, angle, direction):
+        if direction == 0:
+            GPIO.output(self.DIR_PIN, GPIO.LOW)
+            incr_step = +1
+        else:
+            GPIO.output(self.DIR_PIN, GPIO.HIGH)
+            incr_step = -1
         
-            if i >= 0 and i < ramp_cycles:
-                delay = delay_start-(i*increment)
-            elif i >= ramp_cycles and i < (step_number - ramp_cycles):
-                delay = delay_stop
-            else :
-                delay = delay_stop+((i-(step_number - ramp_cycles))*increment)
-                
-            GPIO.output(self.STEP_PIN, GPIO.HIGH)
-            sleep(0.0001)
-            GPIO.output(self.STEP_PIN, GPIO.LOW)
-            sleep(0.0001*(delay))              
-    def testramp1(self,delay_start=1, delay_stop=1, acceleration_time=1, step_ration=1):
-        acceleration_time_s =  acceleration_time/1000
+        step_number = self.get_step_number(angle)
+        
+        acceleration_time_s =  acceleration_time_ms/1000
         cycle_average = (0.0001*delay_start+0.0001*delay_stop)
         ramp_cycles = (acceleration_time_s/cycle_average)
         increment = (delay_start-delay_stop)/ramp_cycles
-        step_number = int(200*16*step_ration)  
-        GPIO.output(self.DIR_PIN, GPIO.HIGH)
         sleep(0.1)  
         if ramp_cycles*2 > step_number:
             ramp_cycles = step_number/2
         for i in range(0,step_number):
+            if (GPIO.input(self.LIMITSWITCH_PIN) == 0) and ((abs(self.get_actual_angle() - self.origin_angle))>10):
+                print("limit switch in rotation_angle")
+                return False
         
             if i >= 0 and i < ramp_cycles:
                 delay = delay_start-(i*increment)
             elif i >= ramp_cycles and i < (step_number - ramp_cycles):
                 delay = delay_stop
             else :
-                delay = delay_stop+((i-(step_number - ramp_cycles))*increment)
-                
+                delay = delay_stop+((i-(step_number - ramp_cycles))*increment)                
             GPIO.output(self.STEP_PIN, GPIO.HIGH)
             sleep(0.0001)
             GPIO.output(self.STEP_PIN, GPIO.LOW)
             sleep(0.0001*(delay))
+            self.actual_step += incr_step   
             
     def rotation_angle(self,delay,angle,direction,setpoint_break=False):
         local_setpoint_old = self.__setpoint
@@ -101,7 +89,7 @@ class StepperMotor:
         
         sleep(0.1)
         for i in range(0,step_number):
-            if GPIO.input(self.LIMITSWITCH_PIN) == 0 and abs(self.get_actual_angle() - self.origin_angle)>5:
+            if (GPIO.input(self.LIMITSWITCH_PIN) == 0) and ((abs(self.get_actual_angle() - self.origin_angle))>10):
                 print("limit switch in rotation_angle")
                 return False
             GPIO.output(self.STEP_PIN, GPIO.HIGH)
@@ -114,8 +102,8 @@ class StepperMotor:
                 return False     
             local_setpoint_old = self.__setpoint
         return True
-            
-    def reach_angle(self,delay=5,angle=0):
+    
+    def compute_angle_todo(self, angle):
         if angle > abs(self.origin_angle):
             angle = abs(self.origin_angle)
         elif angle < -abs(self.origin_angle):
@@ -127,10 +115,22 @@ class StepperMotor:
             direction = 0
         else:
             direction = 1
-        self.rotation_angle(delay,abs(angle_to_do),direction)
+        return abs(angle_to_do),direction    
+            
+    def reach_angle(self,delay, angle):
+        angle_to_do, direction = self.compute_angle_todo(angle)
+        self.rotation_angle(delay,angle_to_do,direction)
+            
+    def reach_angle_ramp(self,delay_start, delay_stop, acceleration_time_ms, angle):
+        angle_to_do, direction = self.compute_angle_todo(angle)
+        self.rotation_angle_ramp(delay_start, delay_stop, acceleration_time_ms,angle_to_do,direction)
 
-    def threaded_reach_angle(self,delay=5,angle=0):
+    def threaded_reach_angle(self, delay, angle):
         t = threading.Thread(target=self.reach_angle, args=(delay,angle))
+        t.start()
+            
+    def threaded_reach_angle_ramp(self, delay_start, delay_stop, acceleration_time_ms, angle):
+        t = threading.Thread(target=self.reach_angle_ramp, args=(delay_start, delay_stop, acceleration_time_ms, angle))
         t.start()
         
     def reach_setpoint(self):
