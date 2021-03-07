@@ -4,6 +4,8 @@ from mathutils import Euler
 from os import system
 import requests
 
+URI = "192.168.1.32"
+
 head_selection = [('Finger','4 Fingers Claw','4 Fingers Claw'),
                     ('TPU','TPU Claw','TPU Claw'),
                     ('Vaccum','Vaccum Head','Vaccum Head')]
@@ -12,6 +14,7 @@ pump_status = [('On','Pump On','4 Fingers Claw'),
                     ('Off','Pump Off','TPU Claw')]
                     
 class SimpleBoneAnglesPanel(bpy.types.Panel):
+    bl_category  = "Berthelette"
     bl_label = "Bone Angles"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -68,6 +71,8 @@ class SimpleBoneAnglesPanel(bpy.types.Panel):
             c1.enabled = False
         else:
             c1.enabled = True
+        row=box.row()  
+        box.operator('berthelette.servoall')
  
 class AngleHelper():
 
@@ -96,101 +101,112 @@ class AngleHelper():
         angle_servo_A = degrees(bone_3.rotation_axis_angle[0])
         return(AngleHelper.restraint_angle(angle_A), AngleHelper.restraint_angle(angle_B),AngleHelper.restraint_angle(angle_C),AngleHelper.restraint_angle(angle_D), angle_servo_A)
     
-class InitRequest(bpy.types.Operator): #fait un rendu de toutes les scenes
+class InitRequest(bpy.types.Operator):
     bl_idname = "berthelette.init"
     bl_label = "Initialize Pose"
     bl_description = 'Initialize Berthelette Pose'
     
     def execute(self, context):   
-        response = requests.get('http://192.168.1.32:5000/init')
+        response = requests.get('http://'+URI+':5000/init')
               
         return{'FINISHED'}  
     
-class SendA(bpy.types.Operator): #fait un rendu de toutes les scenes
+class SendA(bpy.types.Operator):
     bl_idname = "berthelette.senda"
     bl_label = "Send A"
     bl_description = 'Send angle A'
     
     def execute(self, context):   
         values = AngleHelper.segment_rotation()
-        response = requests.get('http://192.168.1.32:5000/angleA/{:.2f}'.format(values[0]))
+        response = requests.get('http://'+URI+':5000/angleA/{:.2f}'.format(values[0]))
               
         return{'FINISHED'}  
 
-class SendB(bpy.types.Operator): #fait un rendu de toutes les scenes
+class SendB(bpy.types.Operator):
     bl_idname = "berthelette.sendb"
     bl_label = "Send B"
     bl_description = 'Send angle B'
     
     def execute(self, context):   
         values = AngleHelper.segment_rotation()
-        response = requests.get('http://192.168.1.32:5000/angleB/{:.2f}'.format(values[1]))
+        response = requests.get('http://'+URI+':5000/angleB/{:.2f}'.format(values[1]))
               
         return{'FINISHED'}  
         
-class SendC(bpy.types.Operator): #fait un rendu de toutes les scenes
+class SendC(bpy.types.Operator):
     bl_idname = "berthelette.sendc"
     bl_label = "Send C"
     bl_description = 'Send angle C'
     
     def execute(self, context):   
         values = AngleHelper.segment_rotation()
-        response = requests.get('http://192.168.1.32:5000/angleC/{:.2f}'.format(values[2]))
+        response = requests.get('http://'+URI+':5000/angleC/{:.2f}'.format(values[2]))
               
         return{'FINISHED'}  
         
-class SendD(bpy.types.Operator): #fait un rendu de toutes les scenes
+class SendD(bpy.types.Operator):
     bl_idname = "berthelette.sendd"
     bl_label = "Send D"
     bl_description = 'Send angle D'
     
     def execute(self, context):   
         values = AngleHelper.segment_rotation()
-        response = requests.get('http://192.168.1.32:5000/angleD/{:.2f}'.format(values[3]))
+        response = requests.get('http://'+URI+':5000/angleD/{:.2f}'.format(values[3]))
               
         return{'FINISHED'}  
 
-class SendAll(bpy.types.Operator): #fait un rendu de toutes les scenes
+class SendAll(bpy.types.Operator):
     bl_idname = "berthelette.sendall"
     bl_label = "Send All"
     bl_description = 'Send all angles'
     
     def execute(self, context):   
         values = AngleHelper.segment_rotation()
-        response = requests.get('http://192.168.1.32:5000/angleAll/{:.2f}/{:.2f}/{:.2f}/{:.2f}'.format(values[0],values[1],values[2],values[3]))
+        response = requests.get('http://'+URI+':5000/angleAll/{:.2f}/{:.2f}/{:.2f}/{:.2f}'.format(values[0],values[1],values[2],values[3]))
               
         return{'FINISHED'}  
     
-class ServoA(bpy.types.Operator): #fait un rendu de toutes les scenes
+class ServoA(bpy.types.Operator):
     bl_idname = "berthelette.servoa"
     bl_label = "Send ServoA"
     bl_description = 'Send angle of servoA'
     
     def execute(self, context):   
         values = AngleHelper.segment_rotation()
-        response = requests.get('http://192.168.1.32:5000/servoA/{:.2f}'.format(values[4]))
+        response = requests.get('http://'+URI+':5000/servoA/{:.2f}'.format(values[4]))
               
         return{'FINISHED'}  
                 
     
-class ServoB(bpy.types.Operator): #fait un rendu de toutes les scenes
+class ServoB(bpy.types.Operator):
     bl_idname = "berthelette.servob"
     bl_label = "Send ServoB"
     bl_description = 'Send angle of servoB'
     
     def execute(self, context):   
-        response = requests.get('http://192.168.1.32:5000/servoB/{:.2f}'.format(bpy.context.scene.ServoB))
+        response = requests.get('http://'+URI+':5000/servoB/{:.2f}'.format(bpy.context.scene.ServoB))
               
         return{'FINISHED'}  
                 
     
-class ServoC(bpy.types.Operator): #fait un rendu de toutes les scenes
+class ServoC(bpy.types.Operator):
     bl_idname = "berthelette.servoc"
     bl_label = "Send ServoC"
     bl_description = 'Send angle of servoC'
     
     def execute(self, context):   
-        response = requests.get('http://192.168.1.32:5000/servoC/{:.2f}'.format(bpy.context.scene.ServoC))
+        response = requests.get('http://'+URI+':5000/servoC/{:.2f}'.format(bpy.context.scene.ServoC))
+              
+        return{'FINISHED'}  
+   
+class ServoAll(bpy.types.Operator):
+    bl_idname = "berthelette.servoall"
+    bl_label = "Send all servos"
+    bl_description = 'Send angle all Servo'
+    
+    def execute(self, context):   
+        values = AngleHelper.segment_rotation()
+        response = requests.get('http://'+URI+':5000/servoAll/{:.2f}/{:.2f}/{:.2f}'.format(values[4],bpy.context.scene.ServoB,bpy.context.scene.ServoC))
               
         return{'FINISHED'}  
     
@@ -253,6 +269,7 @@ bpy.utils.register_class(InitRequest)
 bpy.utils.register_class(ServoA)
 bpy.utils.register_class(ServoB)
 bpy.utils.register_class(ServoC)
+bpy.utils.register_class(ServoAll)
 bpy.utils.register_class(SendA)
 bpy.utils.register_class(SendB)
 bpy.utils.register_class(SendC)
