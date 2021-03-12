@@ -145,7 +145,30 @@ def angleAll(angleA,angleB,angleC,angleD):
     motorB.threaded_reach_angle_ramp(delayB+17,delayB, 1000, angleB)
     motorC.threaded_reach_angle_ramp(delayC+17,delayC, 1000, angleC)
     motorD.threaded_reach_angle_ramp(delayD+17,delayD, 1000, angleD)
+  
+    listDic = {}
+    listDic['SUCCESS'] = "Setpoint set"
+
+    tmp = jsonify(listDic)
+    tmp.headers['Access-Control-Allow-Origin'] = '*'
+    return tmp
+  
+@app.route('/angleAllLonpoll/<float(signed=True):angleA>/<float(signed=True):angleB>/<float(signed=True):angleC>/<float(signed=True):angleD>/<float:servoAngleA>/<float:servoAngleB>/<float:servoAngleC>', strict_slashes=False)
+def angleAllLonpoll(angleA,angleB,angleC,angleD, servoAngleA, servoAngleB, servoAngleC):
+    delayA, delayB, delayC, delayD = syncronize_motor_speed(angleA, angleB, angleC, angleD)
     
+    servoA.threaded_set_angle(servoAngleA)
+    servoB.threaded_set_angle(servoAngleB)
+    servoC.threaded_set_angle(servoAngleC)
+    
+    thread_angle_a = motorA.threaded_reach_angle_ramp(delayA+17, delayA, 1000, angleA)
+    thread_angle_b = motorB.threaded_reach_angle_ramp(delayB+17,delayB, 1000, angleB)
+    thread_angle_c = motorC.threaded_reach_angle_ramp(delayC+17,delayC, 1000, angleC)
+    thread_angle_d = motorD.threaded_reach_angle_ramp(delayD+17,delayD, 1000, angleD)
+    
+    while(thread_angle_a.isAlive() == True or thread_angle_b.isAlive() == True or thread_angle_c.isAlive() == True or thread_angle_d.isAlive() == True):
+        sleep(0.1)
+  
     listDic = {}
     listDic['SUCCESS'] = "Setpoint set"
 
@@ -188,9 +211,9 @@ def servoCRequest(angle):
     
 @app.route('/servoAll/<float:angleA>/<float:angleB>/<float:angleC>', strict_slashes=False)
 def servoAllRequest(angleA, angleB, angleC):
-    servoA.set_angle(angleA)
-    servoB.set_angle(angleB)
-    servoC.set_angle(angleC)
+    servoA.threaded_set_angle(angleA)
+    servoB.threaded_set_angle(angleB)
+    servoC.threaded_set_angle(angleC)
     listDic = {}
     listDic['SUCCESS'] = "Setpoint set"
 
