@@ -3,6 +3,7 @@ from math import degrees,radians
 from mathutils import Euler
 from os import system
 import requests
+import threading
 
 URI = "192.168.1.32"
 
@@ -38,6 +39,13 @@ class SimpleBoneAnglesPanel(bpy.types.Panel):
         row.operator("berthelette.sendd")
         row = self.layout.row()
         row.operator("berthelette.sendall")
+        
+        row = self.layout.row()
+        row.prop(bpy.context.scene,'StartSequence')
+        row = self.layout.row()
+        row.prop(bpy.context.scene,'StopSequence')
+        row = self.layout.row()
+        row.operator("berthelette.sendsequence")
         
         box = self.layout.box()  
         row=box.row() 
@@ -166,6 +174,52 @@ class SendAll(bpy.types.Operator):
               
         return{'FINISHED'}  
     
+class SendSequence(bpy.types.Operator):
+    bl_idname = "berthelette.sendsequence"
+    bl_label = "Send Sequence"
+    bl_description = 'Send all angles in sequence'
+
+    _timer = None
+    t = None
+
+    def modal(self, context, event):
+        if event.type in {'RIGHTMOUSE', 'ESC'}:
+            self.cancel(context)
+            return {'CANCELLED'}
+
+        if event.type == 'TIMER':
+            # change theme color, silly!        
+            if self.t.isAlive() == False:
+                if bpy.context.scene.frame_current == bpy.context.scene.StopSequence:
+                    self.cancel(context)
+                    return {'CANCELLED'}
+                else:
+                    bpy.context.scene.frame_set(bpy.context.scene.frame_current+1)
+                    self.t = threading.Thread(target=self.requestLongPoll, args=())
+                    self.t.start()
+                
+                
+
+        return {'PASS_THROUGH'}
+
+    def requestLongPoll(self):
+        values = AngleHelper.segment_rotation()
+        response = requests.get('http://'+URI+':5000/angleAllLonpoll/{:.2f}/{:.2f}/{:.2f}/{:.2f}/{:.2f}/{:.2f}/{:.2f}'.format(values[0],values[1],values[2],values[3],values[4],bpy.context.scene.ServoB,bpy.context.scene.ServoC))
+
+    def execute(self, context):
+        bpy.context.scene.frame_set(bpy.context.scene.StartSequence)
+        wm = context.window_manager
+        self._timer = wm.event_timer_add(.5, window=context.window)
+        wm.modal_handler_add(self)
+        self.t = threading.Thread(target=self.requestLongPoll, args=())
+        self.t.start()
+        return {'RUNNING_MODAL'}
+
+    def cancel(self, context):
+        wm = context.window_manager
+        wm.event_timer_remove(self._timer)
+
+    
 class ServoA(bpy.types.Operator):
     bl_idname = "berthelette.servoa"
     bl_label = "Send ServoA"
@@ -263,6 +317,9 @@ def pumpStatus_update(self, context):
 bpy.types.Scene.ServoB = bpy.props.FloatProperty(default=90, min=0, max=180, step=500, set=servoB_set, get=servoB_get)
 bpy.types.Scene.ServoC = bpy.props.FloatProperty(default=90, min=0, max=180, step=500)
 
+bpy.types.Scene.StartSequence = bpy.props.IntProperty(default=0, min=0, step=1)
+bpy.types.Scene.StopSequence = bpy.props.IntProperty(default=0, min=0, step=1)
+
 bpy.types.Scene.ClawSelector = bpy.props.EnumProperty(items=head_selection,options={'ENUM_FLAG'}, default = {"Finger"}, update=clawSelector_update)
 bpy.types.Scene.PumpStatus = bpy.props.EnumProperty(items=pump_status,options={'ENUM_FLAG'}, default = {"Off"}, update=pumpStatus_update)
 bpy.utils.register_class(InitRequest)
@@ -275,4 +332,5 @@ bpy.utils.register_class(SendB)
 bpy.utils.register_class(SendC)
 bpy.utils.register_class(SendD)
 bpy.utils.register_class(SendAll)
+bpy.utils.register_class(SendSequence)
 bpy.utils.register_class(SimpleBoneAnglesPanel)
