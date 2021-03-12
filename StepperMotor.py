@@ -128,10 +128,12 @@ class StepperMotor:
     def threaded_reach_angle(self, delay, angle):
         t = threading.Thread(target=self.reach_angle, args=(delay,angle))
         t.start()
+        return t
             
     def threaded_reach_angle_ramp(self, delay_start, delay_stop, acceleration_time_ms, angle):
         t = threading.Thread(target=self.reach_angle_ramp, args=(delay_start, delay_stop, acceleration_time_ms, angle))
         t.start()
+        return t
         
     def reach_setpoint(self):
         setpoint_old = None
@@ -183,6 +185,7 @@ class StepperMotor:
         self.__setpoint_delay = delay
         t = threading.Thread(target=self.reach_setpoint, args=())
         t.start()
+        return t
         
     def set_setpoint(self, setpoint, delay=0):
         if delay != 0:
