@@ -13,12 +13,14 @@ import _thread as thread  # for python 3
 import threading
 from time import sleep
 
+default_speed = 5
+
 SPEED_LIMIT = 30
 
-motorA = StepperMotor(21,20,16,12,2,7*9,200, 3,-88)  
-motorB = StepperMotor(26,19,13,6,2,7*7,200, 3,134)   
-motorC = StepperMotor(18,15,14,23,2,7*7,200, 3,-106)
-motorD = StepperMotor(22,27,17,4,16,4,200, 7,-142)
+motorA = StepperMotor(21,20,16,12,2,7*9,200, default_speed,-88)  
+motorB = StepperMotor(26,19,13,6,2,7*7,200, default_speed,134)   
+motorC = StepperMotor(18,15,14,23,2,7*7,200, default_speed,-106)
+motorD = StepperMotor(22,27,17,4,2,7*7,200, default_speed,-142)
 servoA = ServoMotor(7)
 servoB = ServoMotor(8)
 servoC = ServoMotor(9)
@@ -32,15 +34,15 @@ from flask import Flask, render_template, jsonify, Response, request,  send_file
 app = Flask(__name__)
 
 def initBerthelette():
-    motorC.init_position(3)
-    motorB.init_position(3)
-    motorA.init_position(3)
-    motorD.init_position(7)
+    motorC.init_position(default_speed)
+    motorB.init_position(default_speed)
+    motorA.init_position(default_speed)
+    motorD.init_position(default_speed)
     sleep(2)
-    motorA.reach_angle(3,0)
-    motorD.reach_angle(7,-90)
-    motorB.threaded_reach_angle(3,0)
-    motorC.threaded_reach_angle(3,0)
+    motorA.reach_angle(default_speed,0)
+    motorD.reach_angle(default_speed,-90)
+    motorB.threaded_reach_angle(default_speed,0)
+    motorC.threaded_reach_angle(default_speed,0)
 
     #motorA.threaded_reach_setpoint(10)
     #motorB.threaded_reach_setpoint(10)
@@ -53,10 +55,10 @@ def syncronize_motor_speed(angleA, angleB, angleC, angleD):
     motors = [motorA, motorB, motorC, motorD]
     
     times = []
-    times.append(motorA.get_angle_time(3,angleA))
-    times.append(motorB.get_angle_time(3,angleB))
-    times.append(motorC.get_angle_time(3,angleC))
-    times.append(motorD.get_angle_time(7,angleD))
+    times.append(motorA.get_angle_time(default_speed,angleA))
+    times.append(motorB.get_angle_time(default_speed,angleB))
+    times.append(motorC.get_angle_time(default_speed,angleC))
+    times.append(motorD.get_angle_time(default_speed,angleD))
     print("times:")
     for time in times:
         print(time)
@@ -82,6 +84,46 @@ def syncronize_motor_speed(angleA, angleB, angleC, angleD):
 @app.route('/init', strict_slashes=False)
 def initRequest():
     initBerthelette()
+    listDic = {}
+    listDic['SUCCESS'] = "Setpoint set"
+
+    tmp = jsonify(listDic)
+    tmp.headers['Access-Control-Allow-Origin'] = '*'
+    return tmp
+  
+@app.route('/initA', strict_slashes=False)  
+def initARequest():
+    motorA.init_position(default_speed)
+    listDic = {}
+    listDic['SUCCESS'] = "Setpoint set"
+
+    tmp = jsonify(listDic)
+    tmp.headers['Access-Control-Allow-Origin'] = '*'
+    return tmp  
+    
+@app.route('/initB', strict_slashes=False)  
+def initBRequest():
+    motorB.init_position(default_speed)
+    listDic = {}
+    listDic['SUCCESS'] = "Setpoint set"
+
+    tmp = jsonify(listDic)
+    tmp.headers['Access-Control-Allow-Origin'] = '*'
+    return tmp  
+    
+@app.route('/initC', strict_slashes=False)  
+def initCRequest():
+    motorC.init_position(default_speed)
+    listDic = {}
+    listDic['SUCCESS'] = "Setpoint set"
+
+    tmp = jsonify(listDic)
+    tmp.headers['Access-Control-Allow-Origin'] = '*'
+    return tmp  
+    
+@app.route('/initD', strict_slashes=False)  
+def initDRequest():
+    motorD.init_position(default_speed)
     listDic = {}
     listDic['SUCCESS'] = "Setpoint set"
 

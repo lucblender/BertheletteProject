@@ -4,6 +4,7 @@ from mathutils import Euler
 from os import system
 import requests
 import threading
+from time import sleep
 
 URI = "192.168.1.32"
 
@@ -22,30 +23,51 @@ class SimpleBoneAnglesPanel(bpy.types.Panel):
 
     def draw(self, context):
 
-        row = self.layout.row()
-        row.operator("berthelette.init")
-        row = self.layout.row()
+        #row = self.layout.row()
+        box = self.layout.box()  
+        row=box.row() 
+        row.label(text="Angles parameters")
+        row=box.row() 
+        row.operator("berthelette.init", icon="FILE_REFRESH")
+        
+        inner_box = box.box()  
+        row=inner_box.row()         
+        row.label(text="Init single motor")
+        row=inner_box.row()   
+        row.operator("berthelette.inita", icon="FILE_REFRESH", text="A")
+        row.operator("berthelette.initb", icon="FILE_REFRESH", text="B")
+        row.operator("berthelette.initc", icon="FILE_REFRESH", text="C")
+        row.operator("berthelette.initd", icon="FILE_REFRESH", text="D")
+        row=box.row() 
         values = AngleHelper.segment_rotation()
         row.label(text='Angle A: {:.2f}'.format(values[0]))
         row.operator("berthelette.senda")
-        row = self.layout.row()
+        row=box.row() 
         row.label(text='Angle B: {:.2f}'.format(values[1]))
         row.operator("berthelette.sendb")
-        row = self.layout.row()
+        row=box.row() 
         row.label(text='Angle C: {:.2f}'.format(values[2]))
         row.operator("berthelette.sendc")
-        row = self.layout.row()
+        row=box.row() 
         row.label(text='Angle D: {:.2f}'.format(values[3]))
         row.operator("berthelette.sendd")
-        row = self.layout.row()
-        row.operator("berthelette.sendall")
+        row=box.row() 
+        row.operator("berthelette.sendall", icon="CONSTRAINT")
         
-        row = self.layout.row()
-        row.prop(bpy.context.scene,'StartSequence')
-        row = self.layout.row()
-        row.prop(bpy.context.scene,'StopSequence')
-        row = self.layout.row()
-        row.operator("berthelette.sendsequence")
+        box = self.layout.box()  
+        row=box.row() 
+        row.label(text="Sequence parameters")
+        row=box.row() 
+        row.label(text="First frame")
+        row.prop(bpy.context.scene,'StartSequence', text="")
+        row=box.row() 
+        row.label(text="Last frame")
+        row.prop(bpy.context.scene,'StopSequence', text="")
+        row=box.row()
+        row.label(text="Delay between frame [s]")
+        row.prop(bpy.context.scene,'DelaySequence', text="")        
+        row=box.row() 
+        row.operator("berthelette.sendsequence", icon="PLAY")
         
         box = self.layout.box()  
         row=box.row() 
@@ -80,7 +102,7 @@ class SimpleBoneAnglesPanel(bpy.types.Panel):
         else:
             c1.enabled = True
         row=box.row()  
-        box.operator('berthelette.servoall')
+        box.operator('berthelette.servoall', icon="CONSTRAINT")
  
 class AngleHelper():
 
@@ -116,6 +138,46 @@ class InitRequest(bpy.types.Operator):
     
     def execute(self, context):   
         response = requests.get('http://'+URI+':5000/init')
+              
+        return{'FINISHED'}  
+        
+class InitARequest(bpy.types.Operator):
+    bl_idname = "berthelette.inita"
+    bl_label = "Initialize A Pose"
+    bl_description = 'Initialize A Berthelette Pose'
+    
+    def execute(self, context):   
+        response = requests.get('http://'+URI+':5000/initA')
+              
+        return{'FINISHED'}    
+          
+class InitBRequest(bpy.types.Operator):
+    bl_idname = "berthelette.initb"
+    bl_label = "Initialize B Pose"
+    bl_description = 'Initialize B Berthelette Pose'
+    
+    def execute(self, context):   
+        response = requests.get('http://'+URI+':5000/initB')
+              
+        return{'FINISHED'} 
+             
+class InitCRequest(bpy.types.Operator):
+    bl_idname = "berthelette.initc"
+    bl_label = "Initialize C Pose"
+    bl_description = 'Initialize C Berthelette Pose'
+    
+    def execute(self, context):   
+        response = requests.get('http://'+URI+':5000/initC')
+              
+        return{'FINISHED'}   
+           
+class InitDRequest(bpy.types.Operator):
+    bl_idname = "berthelette.initd"
+    bl_label = "Initialize D Pose"
+    bl_description = 'Initialize D Berthelette Pose'
+    
+    def execute(self, context):   
+        response = requests.get('http://'+URI+':5000/initD')
               
         return{'FINISHED'}  
     
@@ -205,6 +267,7 @@ class SendSequence(bpy.types.Operator):
     def requestLongPoll(self):
         values = AngleHelper.segment_rotation()
         response = requests.get('http://'+URI+':5000/angleAllLonpoll/{:.2f}/{:.2f}/{:.2f}/{:.2f}/{:.2f}/{:.2f}/{:.2f}'.format(values[0],values[1],values[2],values[3],values[4],bpy.context.scene.ServoB,bpy.context.scene.ServoC))
+        sleep(bpy.context.scene.DelaySequence)
 
     def execute(self, context):
         bpy.context.scene.frame_set(bpy.context.scene.StartSequence)
@@ -319,9 +382,14 @@ bpy.types.Scene.ServoC = bpy.props.FloatProperty(default=90, min=0, max=180, ste
 
 bpy.types.Scene.StartSequence = bpy.props.IntProperty(default=0, min=0, step=1)
 bpy.types.Scene.StopSequence = bpy.props.IntProperty(default=0, min=0, step=1)
+bpy.types.Scene.DelaySequence = bpy.props.FloatProperty(default=0, min=0, step=50)
 
 bpy.types.Scene.ClawSelector = bpy.props.EnumProperty(items=head_selection,options={'ENUM_FLAG'}, default = {"Finger"}, update=clawSelector_update)
 bpy.types.Scene.PumpStatus = bpy.props.EnumProperty(items=pump_status,options={'ENUM_FLAG'}, default = {"Off"}, update=pumpStatus_update)
+bpy.utils.register_class(InitARequest)
+bpy.utils.register_class(InitBRequest)
+bpy.utils.register_class(InitCRequest)
+bpy.utils.register_class(InitDRequest)
 bpy.utils.register_class(InitRequest)
 bpy.utils.register_class(ServoA)
 bpy.utils.register_class(ServoB)
