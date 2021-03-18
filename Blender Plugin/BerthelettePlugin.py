@@ -326,12 +326,6 @@ class ServoAll(bpy.types.Operator):
         response = requests.get('http://'+URI+':5000/servoAll/{:.2f}/{:.2f}/{:.2f}'.format(values[4],bpy.context.scene.ServoB,bpy.context.scene.ServoC))
               
         return{'FINISHED'}  
-    
-def servoB_update(self, context):
-    if self.ServoB == 180:
-        print(self.ServoB)
-
-    print("My property is:", self.ServoB)
                     
 def servoB_set(self, value):
     if self.ClawSelector == {'TPU'}:
@@ -339,19 +333,23 @@ def servoB_set(self, value):
             value = 50    
     
     self["ServoB"] = value
-                    
+    
+old_value = None                
 def servoB_get(self):
+    global old_value
     value = self["ServoB"]
-    if self.ClawSelector == {'TPU'}:
-        bpy.data.objects['Gear left'].rotation_euler[1] = radians(-value)
-        bpy.data.objects['Gear right'].rotation_euler[1] = radians(value)
-    elif self.ClawSelector == {"Finger"}:
-        bpy.data.objects['Finger_1'].rotation_euler[1] = radians(-90+value/7.2)
-        bpy.data.objects['Finger_2'].rotation_euler[1] = radians(-90-value/7.2)
-        bpy.data.objects['Finger_3'].rotation_euler[1] = radians(-90-value/7.2)
-        bpy.data.objects['Finger_4'].rotation_euler[1] = radians(-90-value/7.2)
-    elif self.ClawSelector == {"Vaccum"}:
-        pass
+    if old_value != value:
+        if self.ClawSelector == {'TPU'}:
+            bpy.data.objects['Gear left'].rotation_euler[1] = radians(-value)
+            bpy.data.objects['Gear right'].rotation_euler[1] = radians(value)
+        elif self.ClawSelector == {"Finger"}:
+            bpy.data.objects['Finger_1'].rotation_euler[1] = radians(-90+value/7.2)
+            bpy.data.objects['Finger_2'].rotation_euler[1] = radians(-90-value/7.2)
+            bpy.data.objects['Finger_3'].rotation_euler[1] = radians(-90-value/7.2)
+            bpy.data.objects['Finger_4'].rotation_euler[1] = radians(-90-value/7.2)
+        elif self.ClawSelector == {"Vaccum"}:
+            pass
+    old_value = value
     return self.get("ServoB", 0.0)
 
 def clawSelector_update(self, context):
@@ -375,30 +373,42 @@ def pumpStatus_update(self, context):
     elif self.PumpStatus == {"Off"}:
         context.scene.ServoB = 180
         context.scene.ServoC = 0
-                
+     
+     
+class_list = (InitARequest,
+    InitBRequest,
+    InitCRequest,
+    InitDRequest,
+    InitRequest,
+    ServoA,
+    ServoB,
+    ServoC,
+    ServoAll,
+    SendA,
+    SendB,
+    SendC,
+    SendD,
+    SendAll,
+    SendSequence,
+    SimpleBoneAnglesPanel
+    )           
+def register(): 
+    bpy.types.Scene.ServoB = bpy.props.FloatProperty(default=90, min=0, max=180, step=500, set=servoB_set, get=servoB_get)
+    bpy.types.Scene.ServoC = bpy.props.FloatProperty(default=90, min=0, max=180, step=500)
 
-bpy.types.Scene.ServoB = bpy.props.FloatProperty(default=90, min=0, max=180, step=500, set=servoB_set, get=servoB_get)
-bpy.types.Scene.ServoC = bpy.props.FloatProperty(default=90, min=0, max=180, step=500)
+    bpy.types.Scene.StartSequence = bpy.props.IntProperty(default=0, min=0, step=1)
+    bpy.types.Scene.StopSequence = bpy.props.IntProperty(default=0, min=0, step=1)
+    bpy.types.Scene.DelaySequence = bpy.props.FloatProperty(default=0, min=0, step=50)
 
-bpy.types.Scene.StartSequence = bpy.props.IntProperty(default=0, min=0, step=1)
-bpy.types.Scene.StopSequence = bpy.props.IntProperty(default=0, min=0, step=1)
-bpy.types.Scene.DelaySequence = bpy.props.FloatProperty(default=0, min=0, step=50)
+    bpy.types.Scene.ClawSelector = bpy.props.EnumProperty(items=head_selection,options={'ENUM_FLAG'}, default = {"Finger"}, update=clawSelector_update)
+    bpy.types.Scene.PumpStatus = bpy.props.EnumProperty(items=pump_status,options={'ENUM_FLAG'}, default = {"Off"}, update=pumpStatus_update)
+    for cls in class_list:
+        bpy.utils.register_class(cls)
+    
+def unregister():    
+    for cls in class_list:
+        bpy.utils.unregister_class(cls)
 
-bpy.types.Scene.ClawSelector = bpy.props.EnumProperty(items=head_selection,options={'ENUM_FLAG'}, default = {"Finger"}, update=clawSelector_update)
-bpy.types.Scene.PumpStatus = bpy.props.EnumProperty(items=pump_status,options={'ENUM_FLAG'}, default = {"Off"}, update=pumpStatus_update)
-bpy.utils.register_class(InitARequest)
-bpy.utils.register_class(InitBRequest)
-bpy.utils.register_class(InitCRequest)
-bpy.utils.register_class(InitDRequest)
-bpy.utils.register_class(InitRequest)
-bpy.utils.register_class(ServoA)
-bpy.utils.register_class(ServoB)
-bpy.utils.register_class(ServoC)
-bpy.utils.register_class(ServoAll)
-bpy.utils.register_class(SendA)
-bpy.utils.register_class(SendB)
-bpy.utils.register_class(SendC)
-bpy.utils.register_class(SendD)
-bpy.utils.register_class(SendAll)
-bpy.utils.register_class(SendSequence)
-bpy.utils.register_class(SimpleBoneAnglesPanel)
+ 
+if __name__ == "__main__": #
+    register()

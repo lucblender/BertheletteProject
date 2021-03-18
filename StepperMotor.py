@@ -139,10 +139,8 @@ class StepperMotor:
         setpoint_old = None
         while(True):
             if self.__setpoint > abs(self.origin_angle):
-                print("a")
                 self.__setpoint = abs(self.origin_angle)
             elif self.__setpoint < -abs(self.origin_angle):
-                print("b")
                 self.__setpoint = -abs(self.origin_angle)
             reached = True
             if setpoint_old != self.__setpoint:
@@ -152,12 +150,8 @@ class StepperMotor:
                 if angle_to_do < 0:
                     direction = 0
                 else:
-                    direction = 1
-                print("Will reach setpoint of", self.__setpoint)                
-                print(setpoint_old, self.__setpoint)
+                    direction = 1             
                 reached = self.rotation_angle(self.__setpoint_delay,abs(angle_to_do),direction,True)
-                print(reached)
-                print(setpoint_old, self.__setpoint)
             if reached == True:
                 setpoint_old = self.__setpoint
             sleep(0.01)
@@ -174,7 +168,6 @@ class StepperMotor:
     
     def get_angle_delay(self,time,angle):
         real_angle = abs(self.get_actual_angle()-angle)
-        print(real_angle)
         if int(real_angle) == 0:
             return self.__setpoint_delay
         else:            
