@@ -54,21 +54,7 @@ class SimpleBoneAnglesPanel(bpy.types.Panel):
         row=box.row() 
         row.operator("berthelette.sendall", icon="CONSTRAINT")
         
-        box = self.layout.box()  
-        row=box.row() 
-        row.label(text="Sequence parameters")
-        row=box.row() 
-        row.label(text="First frame")
-        row.prop(bpy.context.scene,'StartSequence', text="")
-        row=box.row() 
-        row.label(text="Last frame")
-        row.prop(bpy.context.scene,'StopSequence', text="")
-        row=box.row()
-        row.label(text="Delay between frame [s]")
-        row.prop(bpy.context.scene,'DelaySequence', text="")        
-        row=box.row() 
-        row.operator("berthelette.sendsequence", icon="PLAY")
-        
+         
         box = self.layout.box()  
         row=box.row() 
         row.label(text="Head parameters")
@@ -103,6 +89,22 @@ class SimpleBoneAnglesPanel(bpy.types.Panel):
             c1.enabled = True
         row=box.row()  
         box.operator('berthelette.servoall', icon="CONSTRAINT")
+        
+        box = self.layout.box()  
+        row=box.row() 
+        row.label(text="Sequence parameters")
+        row=box.row() 
+        row.label(text="First frame")
+        row.prop(bpy.context.scene,'StartSequence', text="")
+        row=box.row() 
+        row.label(text="Last frame")
+        row.prop(bpy.context.scene,'StopSequence', text="")
+        row=box.row()
+        row.label(text="Delay between frame [s]")
+        row.prop(bpy.context.scene,'DelaySequence', text="")        
+        row=box.row() 
+        row.operator("berthelette.sendsequence", icon="PLAY")
+       
  
 class AngleHelper():
 

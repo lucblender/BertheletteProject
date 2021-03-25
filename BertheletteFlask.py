@@ -6,12 +6,15 @@ import sys
 import time
 import os
 import RPi.GPIO as GPIO
+import json
 
 from StepperMotor import StepperMotor
 from ServoMotor import ServoMotor
 import _thread as thread  # for python 3   
 import threading
 from time import sleep
+
+save_file_name = 'motors_save.json'
 
 default_speed = 5
 
@@ -185,9 +188,9 @@ def angleAll(angleA,angleB,angleC,angleD):
 def angleAllLonpoll(angleA,angleB,angleC,angleD, servoAngleA, servoAngleB, servoAngleC):
     delayA, delayB, delayC, delayD = syncronize_motor_speed(angleA, angleB, angleC, angleD)
     
-    servoA.threaded_set_angle(servoAngleA)
-    servoB.threaded_set_angle(servoAngleB)
-    servoC.threaded_set_angle(servoAngleC)
+    servoA.set_angle(servoAngleA)
+    servoB.set_angle(servoAngleB)
+    servoC.set_angle(servoAngleC)
     
     thread_angle_a = motorA.threaded_reach_angle_ramp(delayA+offset_low_speed, delayA, 1000, angleA)
     thread_angle_b = motorB.threaded_reach_angle_ramp(delayB+offset_low_speed,delayB, 1000, angleB)
@@ -236,9 +239,9 @@ def servoCRequest(angle):
     
 @app.route('/servoAll/<float:angleA>/<float:angleB>/<float:angleC>', strict_slashes=False)
 def servoAllRequest(angleA, angleB, angleC):
-    servoA.threaded_set_angle(angleA)
-    servoB.threaded_set_angle(angleB)
-    servoC.threaded_set_angle(angleC)
+    servoA.set_angle(angleA)
+    servoB.set_angle(angleB)
+    servoC.set_angle(angleC)
     listDic = {}
     listDic['SUCCESS'] = "Setpoint set"
 
@@ -246,11 +249,37 @@ def servoAllRequest(angleA, angleB, angleC):
     tmp.headers['Access-Control-Allow-Origin'] = '*'
     return tmp
     
+def save_motors_json():
+    data = {}
+    data['motorA']= {
+        'actual_step' : motorA.actual_step
+    }
+    data['motorB']= {
+        'actual_step' : motorB.actual_step
+    }
+    data['motorC']= {
+        'actual_step' : motorC.actual_step
+    }
+    data['motorD']= {
+        'actual_step' : motorD.actual_step
+    }
+    with open(save_file_name, 'w') as outfile:
+        json.dump(data, outfile)
+
 def signal_handler(sig, frame):
     GPIO.cleanup()
+    save_motors_json()
     sys.exit(0)
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
-    initBerthelette()
+    if os.path.exists(save_file_name):
+        with open(save_file_name) as json_file:
+            data = json.load(json_file)
+            motorA.actual_step = data['motorA']['actual_step']
+            motorB.actual_step = data['motorB']['actual_step']
+            motorC.actual_step = data['motorC']['actual_step']
+            motorD.actual_step = data['motorD']['actual_step']
+    else:
+        initBerthelette()
     app.run(host='::', debug=False, use_reloader=False)
