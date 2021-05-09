@@ -130,7 +130,14 @@ class AngleHelper():
         angle_A = AngleHelper.get_rotation(bone_0)[1] if AngleHelper.get_rotation(bone_0)[0] >0 else 180-AngleHelper.get_rotation(bone_0)[1] 
         angle_B = -angle_A+ (AngleHelper.get_rotation(bone_1)[1]if AngleHelper.get_rotation(bone_1)[0] >0 else 180-AngleHelper.get_rotation(bone_1)[1])    
         angle_C = -angle_A-angle_B+(AngleHelper.get_rotation(bone_2)[1]if AngleHelper.get_rotation(bone_2)[0] >0 else 180-AngleHelper.get_rotation(bone_2)[1])
-        angle_servo_A = degrees(bone_3.rotation_axis_angle[0])
+        angle_servo_A_tmp = degrees(bone_3.rotation_euler[1])
+        if angle_servo_A_tmp<-90:
+            angle_servo_A_tmp = -90
+        elif angle_servo_A_tmp > 90:
+            angle_servo_A_tmp = 90
+        
+
+        angle_servo_A = 180 - (angle_servo_A_tmp + 90)
         return(AngleHelper.restraint_angle(angle_A), AngleHelper.restraint_angle(angle_B),AngleHelper.restraint_angle(angle_C),AngleHelper.restraint_angle(angle_D), angle_servo_A)
     
 class InitRequest(bpy.types.Operator):
