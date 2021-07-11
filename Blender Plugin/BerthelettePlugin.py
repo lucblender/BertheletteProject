@@ -15,6 +15,7 @@ head_selection = [('Finger','4 Fingers Claw','4 Fingers Claw'),
 pump_status = [('On','Pump On','4 Fingers Claw'),
                     ('Off','Pump Off','TPU Claw')]
                     
+                    
 class SimpleBoneAnglesPanel(bpy.types.Panel):
     bl_category  = "Berthelette"
     bl_label = "Bone Angles"
@@ -62,7 +63,7 @@ class SimpleBoneAnglesPanel(bpy.types.Panel):
         row.prop(bpy.context.scene,'ClawSelector')
         row=box.row()
         row.label(text='Servo A: {:.2f}'.format(values[4]))   
-        row.operator("berthelette.servoa")  
+        row.operator("berthelette.servoa")        
         
         
         if context.scene.ClawSelector == {"Vaccum"}:
@@ -89,6 +90,15 @@ class SimpleBoneAnglesPanel(bpy.types.Panel):
             c1.enabled = True
         row=box.row()  
         box.operator('berthelette.servoall', icon="CONSTRAINT")
+        
+          
+        box = self.layout.box()  
+        row=box.row() 
+        row.label(text="Solenoid clamp")   
+        row=box.row() 
+        row.operator("berthelette.sendsolenoid") 
+        row=box.row()
+        row.prop(bpy.context.scene,'SolenoidStatus', text="Open solenoid clamp")
         
         box = self.layout.box()  
         row=box.row() 
@@ -245,6 +255,22 @@ class SendAll(bpy.types.Operator):
               
         return{'FINISHED'}  
     
+class SendSolenoid(bpy.types.Operator):
+    bl_idname = "berthelette.sendsolenoid"
+    bl_label = "Send Solenoid"
+    bl_description = 'Send solenoid, autoclose after 5 secs'
+    
+    def execute(self, context):   
+        values = AngleHelper.segment_rotation()
+        if context.scene.SolenoidStatus == True:
+            response = requests.get('http://'+URI+':5000/openSolenoid')
+            print("open")
+        else:
+            response = requests.get('http://'+URI+':5000/closeSolenoid')
+            print("close")
+              
+        return{'FINISHED'}  
+    
 class SendSequence(bpy.types.Operator):
     bl_idname = "berthelette.sendsequence"
     bl_label = "Send Sequence"
@@ -268,13 +294,14 @@ class SendSequence(bpy.types.Operator):
                     bpy.context.scene.frame_set(bpy.context.scene.frame_current+1)
                     self.t = threading.Thread(target=self.requestLongPoll, args=())
                     self.t.start()
-                
-                
 
         return {'PASS_THROUGH'}
 
     def requestLongPoll(self):
         values = AngleHelper.segment_rotation()
+        
+        bpy.ops.berthelette.sendsolenoid()
+        
         response = requests.get('http://'+URI+':5000/angleAllLonpoll/{:.2f}/{:.2f}/{:.2f}/{:.2f}/{:.2f}/{:.2f}/{:.2f}'.format(values[0],values[1],values[2],values[3],values[4],bpy.context.scene.ServoB,bpy.context.scene.ServoC))
         sleep(bpy.context.scene.DelaySequence)
 
@@ -382,7 +409,7 @@ def pumpStatus_update(self, context):
     elif self.PumpStatus == {"Off"}:
         context.scene.ServoB = 180
         context.scene.ServoC = 0
-     
+
      
 class_list = (InitARequest,
     InitBRequest,
@@ -399,7 +426,8 @@ class_list = (InitARequest,
     SendD,
     SendAll,
     SendSequence,
-    SimpleBoneAnglesPanel
+    SimpleBoneAnglesPanel,
+    SendSolenoid
     )           
 def register(): 
     bpy.types.Scene.ServoB = bpy.props.FloatProperty(default=90, min=0, max=180, step=500, set=servoB_set, get=servoB_get)
@@ -408,9 +436,12 @@ def register():
     bpy.types.Scene.StartSequence = bpy.props.IntProperty(default=0, min=0, step=1)
     bpy.types.Scene.StopSequence = bpy.props.IntProperty(default=0, min=0, step=1)
     bpy.types.Scene.DelaySequence = bpy.props.FloatProperty(default=0, min=0, step=50)
+    
+    bpy.types.Scene.SolenoidStatus = bpy.props.BoolProperty(default=False)
 
     bpy.types.Scene.ClawSelector = bpy.props.EnumProperty(items=head_selection,options={'ENUM_FLAG'}, default = {"Finger"}, update=clawSelector_update)
     bpy.types.Scene.PumpStatus = bpy.props.EnumProperty(items=pump_status,options={'ENUM_FLAG'}, default = {"Off"}, update=pumpStatus_update)
+    
     for cls in class_list:
         bpy.utils.register_class(cls)
     

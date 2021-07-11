@@ -10,6 +10,7 @@ import json
 
 from StepperMotor import StepperMotor
 from ServoMotor import ServoMotor
+from Solenoid import Solenoid
 import _thread as thread  # for python 3   
 import threading
 from time import sleep
@@ -29,6 +30,7 @@ motorD = StepperMotor(22,27,17,4,2,7*7,200, default_speed,-142)
 servoA = ServoMotor(7)
 servoB = ServoMotor(8)
 servoC = ServoMotor(9)
+solenoid = Solenoid(11)
 
 file_path = os.path.dirname(__file__)
 sys.path.insert(0, file_path)
@@ -56,6 +58,7 @@ def syncronize_motor_speed(angleA, angleB, angleC, angleD):
     motors = [motorA, motorB, motorC, motorD]
     
     times = []
+    
     times.append(motorA.get_angle_time(default_speed,angleA))
     times.append(motorB.get_angle_time(default_speed,angleB))
     times.append(motorC.get_angle_time(default_speed,angleC))
@@ -66,7 +69,19 @@ def syncronize_motor_speed(angleA, angleB, angleC, angleD):
     delayB = motorB.get_angle_delay(longest_time, angleB)
     delayC = motorC.get_angle_delay(longest_time, angleC)
     delayD = motorD.get_angle_delay(longest_time, angleD)
+    """
     
+    times.append(motorA.get_ramp_angle_time(default_speed+17,default_speed, 1000, angleA))
+    times.append(motorB.get_ramp_angle_time(default_speed+17,default_speed, 1000, angleB))
+    times.append(motorC.get_ramp_angle_time(default_speed+17,default_speed, 1000, angleC))
+    times.append(motorD.get_ramp_angle_time(default_speed+17,default_speed, 1000, angleD))
+    longest_index = times.index(max(times))
+    longest_time = times[longest_index]
+    delayA = motorA.get_ramp_angle_delay(longest_time, angleA, 1000)
+    delayB = motorB.get_ramp_angle_delay(longest_time, angleB, 1000)
+    delayC = motorC.get_ramp_angle_delay(longest_time, angleC, 1000)
+    delayD = motorD.get_ramp_angle_delay(longest_time, angleD, 1000)
+    """
     delayA = delayA if delayA < SPEED_LIMIT else SPEED_LIMIT
     delayB = delayB if delayB < SPEED_LIMIT else SPEED_LIMIT
     delayC = delayC if delayC < SPEED_LIMIT else SPEED_LIMIT
@@ -75,8 +90,25 @@ def syncronize_motor_speed(angleA, angleB, angleC, angleD):
     print(delayA, delayB, delayC, delayD)
     return delayA, delayB, delayC, delayD
 
+@app.route('/openSolenoid', strict_slashes=False)
+def openSolenoid():
+    solenoid.open()
+    listDic = {}
+    listDic['SUCCESS'] = "Setpoint set"
 
+    tmp = jsonify(listDic)
+    tmp.headers['Access-Control-Allow-Origin'] = '*'
+    return tmp
+   
+@app.route('/closeSolenoid', strict_slashes=False)
+def closeSolenoid():
+    solenoid.close()
+    listDic = {}
+    listDic['SUCCESS'] = "Setpoint set"
 
+    tmp = jsonify(listDic)
+    tmp.headers['Access-Control-Allow-Origin'] = '*'
+    return tmp
     
 @app.route('/init', strict_slashes=False)
 def initRequest():
