@@ -21,11 +21,13 @@ Done:
 
 - Published Controller code
 - Published Blender plugin code
+- Added reference of components used in the autoclamp system
 
 To do:
 
 - Publish blender file
 - Publish 3D files to build Berthelette Mark I 
+- Publish Gerber of PCBs
 
 ## Index
 
@@ -45,10 +47,22 @@ The arm use raspberry pi GPIO to control the motor driver and servo motor. To do
 
 ### Material
 
+#### General
+
 Berthelette has been tested with a Raspberry Pi 4 4GB. It has not been tested with less powerfull model.
 
-The motor driver are the VMA333 because that's what I had in stock. They are not the best at all. Any stepper motor driver with Enable, Step and Dir signal will work.
+The motor driver are the VMA333 because that's what I had in stock. They are not the best at all. Any stepper motor driver with Enable, Step and Dir signal will work. The A4988 have been tested too and are proved to work with the code.
 
+#### Auto clamp system
+
+| Description                            | Reseller   | Reference                                                                                                     | Qty |
+|----------------------------------------|------------|---------------------------------------------------------------------------------------------------------------|-----|
+| 5V Solenoids                           | AliExpress | [Aliexpress Link](https://www.aliexpress.com/item/4000807560712.html?spm=a2g0s.9042311.0.0.3aec4c4djkiW06)    | 4   |
+| Magnetic Connectors Male  6 pins       | AliExpress | [Aliexpress Link](https://www.aliexpress.com/item/1005002669709542.html?spm=a2g0s.9042311.0.0.3aec4c4djkiW06) | 1   |
+| Magnetic Connectors Female 6 pins      | AliExpress | [Aliexpress Link](https://www.aliexpress.com/item/1005002669709542.html?spm=a2g0s.9042311.0.0.3aec4c4djkiW06) |     |
+| Solenoid Driver PCB                    | PCBWay     | TODO ADD GERBER                                                                                               | 1   |
+| Slip Ring PCB                          | PCBWay     | TODO ADD GERBER                                                                                               | 1   |
+| Spring connectors  (For slip ring pcb) | AliExpress | [Aliexpress Link](https://www.aliexpress.com/item/4000282372452.html?spm=a2g0s.9042311.0.0.3aec4c4djkiW06)    | 4   |
 
 ## License
 
